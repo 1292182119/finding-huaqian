@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>终端 - 珠港侦探事务所</title>
+    <style>
+        /* 样式保持不变，但在视觉上增加了磨砂玻璃感 */
+        :root { --win-bg: rgba(245, 245, 245, 0.9); --accent: #2c3e50; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: 'PingFang SC', sans-serif; overflow: hidden; background: #000 url('https://images.unsplash.com/photo-1518391846015-55a9cc003b25?q=80&w=2000') center/cover; }
+        #desktop { padding: 20px; display: flex; flex-direction: column; flex-wrap: wrap; align-content: flex-start; gap: 20px; height: calc(100% - 45px); }
+        .icon { width: 85px; text-align: center; cursor: pointer; transition: 0.2s; }
+        .icon:hover { background: rgba(255,255,255,0.1); border-radius: 8px; }
+        .icon img { width: 50px; height: 50px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5)); }
+        .icon span { color: white; display: block; margin-top: 8px; font-size: 13px; text-shadow: 1px 1px 3px #000; }
+        .window { position: absolute; width: 750px; height: 520px; background: var(--win-bg); border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.6); display: none; flex-direction: column; border: 1px solid rgba(255,255,255,0.3); z-index: 100; backdrop-filter: blur(10px); overflow: hidden; }
+        .win-header { background: rgba(255,255,255,0.8); padding: 12px 18px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ccc; cursor: move; }
+        .win-body { flex: 1; display: flex; overflow: hidden; }
+        #mail-sidebar { width: 220px; background: rgba(230,230,230,0.8); border-right: 1px solid #ccc; overflow-y: auto; }
+        .mail-list-item { padding: 15px; border-bottom: 1px solid #ddd; cursor: pointer; font-size: 13px; transition: 0.2s; }
+        .mail-list-item:hover { background: #ddd; }
+        .mail-list-item.active { background: #fff; border-left: 5px solid var(--accent); }
+        .mail-view { flex: 1; background: white; padding: 30px; overflow-y: auto; line-height: 1.7; }
+        #reply-box { padding: 20px; border-top: 1px solid #eee; background: #fafafa; }
+        #reply-input { width: 100%; height: 80px; padding: 10px; border: 1px solid #ddd; border-radius: 8px; resize: none; }
+        .btn { margin-top: 10px; padding: 8px 20px; background: var(--accent); color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .badge { position: absolute; top: -5px; right: 10px; background: #e74c3c; color: white; border-radius: 10px; padding: 2px 8px; font-size: 11px; font-weight: bold; border: 2px solid white; }
+        #taskbar { position: absolute; bottom: 0; width: 100%; height: 40px; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; box-sizing: border-box; color: white; font-size: 13px; z-index: 1000; }
+    </style>
+</head>
+<body>
+
+<div id="desktop">
+    <div class="icon" onclick="openWin('mail-win')">
+        <div id="mail-count" class="badge">1</div>
+        <img src="https://cdn-icons-png.flaticon.com/512/732/732200.png">
+        <span>邮件中心</span>
+    </div>
+    <div class="icon" onclick="openWin('search-win')">
+        <img src="https://cdn-icons-png.flaticon.com/512/300/300221.png">
+        <span>千寻搜索</span>
+    </div>
+    <div class="icon" onclick="openWin('file-win')">
+        <img src="https://cdn-icons-png.flaticon.com/512/5968/5968260.png">
+        <span>遗物文件夹</span>
+    </div>
+</div>
+
+<!-- 邮件窗口 -->
+<div id="mail-win" class="window">
+    <div class="win-header"><b>收件箱 - 珠港教育内网</b><span class="close-btn" onclick="closeWin('mail-win')">×</span></div>
+    <div class="win-body">
+        <div id="mail-sidebar"></div>
+        <div style="flex:1; display:flex; flex-direction:column;">
+            <div id="mail-reader" class="mail-view"></div>
+            <div id="reply-box" style="display:none;">
+                <textarea id="reply-input" placeholder="回复颜老师..."></textarea><br>
+                <button class="btn" onclick="handleReply()">发送回复</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 搜索窗口 -->
+<div id="search-win" class="window">
+    <div class="win-header"><b>千寻搜索 Qianxun Search</b><span class="close-btn" onclick="closeWin('search-win')">×</span></div>
+    <div class="win-body" style="display:block; padding:30px; text-align:center;">
+        <h1 style="color:#d35400">千寻</h1>
+        <input type="text" id="sk" style="width:70%; padding:10px; border:2px solid #d35400; border-radius:20px;" placeholder="输入黎勇、05年、西岸废料场...">
+        <button class="btn" onclick="runSearch()">搜索</button>
+        <div id="search-res" style="text-align:left; margin-top:20px;"></div>
+    </div>
+</div>
+
+<!-- 文件窗口 -->
+<div id="file-win" class="window">
+    <div class="win-header"><b>文件浏览器</b><span class="close-btn" onclick="closeWin('file-win')">×</span></div>
+    <div class="win-body" id="file-content" style="display:block; padding:20px;">
+        <p style="color:#999">文件夹为空</p>
+    </div>
+</div>
+
+<div id="taskbar"><div><b>ZHUGANG OS</b></div><div id="clock">12:00</div></div>
+
+<script>
+    /* --- 剧情数据包 (Data Hub) --- */
+    const STORY = {
+        mails: [
+            {
+                id: 1, sender: "颜庚明", subject: "老同学，请帮帮我，我真的很担心这个学生",
+                time: "2026-03-23 09:00",
+                content: "老同学，好久不见，很抱歉突然打扰你。但我这里遇见了一件非常稀奇、甚至让我有点后怕的事情。<br><br>听说你现在在做私家侦探，我想，也许只有你能帮我理清头绪了。我班里一个叫华倩的女生失踪了，但随着调查，我发现她身后的真相可能远比我想象的复杂。<br><br>如果你有兴趣听听细节，请回复我，我真的很需要你的专业建议。",
+                read: false, replied: false
+            }
+        ],
+        searchDB: {
+            "黎勇": "<b>[档案] 黎氏贸易洗钱案 (2021)</b><br>负责人黎勇因涉嫌通过非法地下钱庄洗钱被捕，判处有期徒刑15年。其女黎一舟案发后下落不明。",
+            "05年": "<b>[身份核查] 黎一舟</b><br>出生日期：2005年10月14日。身份状态：在逃/失踪。系2021年宁城特大命案关键证人。",
+            "西岸废料场": "<b>[警告] 施工区域</b><br>西岸旧船厂废料场已被梁氏集团收购。该区域目前为私人禁地，安保严密。"
+        }
+    };
+
+    /* --- 核心引擎 (Engine) --- */
+    function init() {
+        renderMails();
+        setInterval(() => {
+            const n = new Date();
+            document.getElementById('clock').innerText = n.getHours().toString().padStart(2,'0')+":"+n.getMinutes().toString().padStart(2,'0');
+        }, 1000);
+    }
+
+    function renderMails() {
+        const sidebar = document.getElementById('mail-sidebar');
+        sidebar.innerHTML = STORY.mails.map(m => `
+            <div class="mail-list-item ${!m.read?'unread':''}" onclick="showMail(${m.id})">
+                <b>${m.sender}</b><br><small>${m.subject}</small>
+            </div>
+        `).join('');
+        const unread = STORY.mails.filter(m=>!m.read).length;
+        document.getElementById('mail-count').innerText = unread;
+        document.getElementById('mail-count').style.display = unread>0?'block':'none';
+    }
+
+    function showMail(id) {
+        const mail = STORY.mails.find(m => m.id === id);
+        mail.read = true; renderMails();
+        document.getElementById('mail-reader').innerHTML = `
+            <h3>${mail.subject}</h3>
+            <small>发件人：${mail.sender} | 时间：${mail.time}</small><hr>
+            <p>${mail.content}</p>
+        `;
+        document.getElementById('reply-box').style.display = (id===1 && !mail.replied) ? 'block' : 'none';
+    }
+
+    function handleReply() {
+        const input = document.getElementById('reply-input').value;
+        if(!input) return;
+        document.getElementById('reply-box').innerHTML = "<p style='color:green'>邮件已发送，正在等待对方回应...</p>";
+        STORY.mails[0].replied = true;
+
+        // 模拟颜老师的感性回复
+        setTimeout(() => {
+            const detailMail = {
+                id: 2, sender: "颜庚明", subject: "Re: 详细情况和那些离奇的谎言",
+                time: "2026-03-23 09:05",
+                content: `老同学，感谢你的回复。<br><br>说实话，这孩子三个月前突然出现在我们班门外时，我第一反应是提醒校外人士不得入内。可她看着我，眼神特别干净，她说：<b>“老师，我想来上学。”</b> 就这一句话，让我动了恻隐之心。<br><br>我带她去和校长沟通，她为了求我们留下她，透露了一个惊人的秘密。她说她叫华倩，17岁，已经要和当地一个很有名的富豪结婚了，但对方已经71岁了。她坚持说两人是真爱，但我跟校长当时私下都推测，这孩子可能是贪图财产，或者是为了逃避什么苦衷。<br><br>她哭着告诉我们，对方不让她出门，她是偷偷溜出来想继续上学的。这故事听起来离奇得像八点档肥皂剧，但面对她那副样子，我们真的相信了。后来学校给她办了寄宿，她在班里表现一直很安静。<br><br>直到5天前她突然失踪，校长去找那位富豪，对方竟然说根本没这回事，更不认识什么华倩。警察也说系统里查不到这个17岁的女生。<b>那一刻我才意识到，她是个满口谎言的骗子。</b><br><br>可在一起相处了三个月，我总觉得她不会无缘无故这么做。那种认真不是装出来的。我觉得她一定是出了什么事。<b>老同学，拜托你，帮帮她吧。</b><br><br><b>PS:</b> 我去整理了她宿舍的遗物，附件的照片拍下来发你了。<br><b>PPS:</b> 面试时她说漏嘴是05年出生，当时解释说是为了合法结婚改的年龄。我现在怀疑，05年才是她唯一的实话。`,
+                read: false
+            };
+            STORY.mails.unshift(detailMail);
+            renderMails();
+            document.getElementById('file-content').innerHTML = `
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <div style="text-align:center"><img src="https://images.unsplash.com/photo-1544947950-fa07a98d237f?q=80&w=200" style="width:100%"><br>教材.jpg</div>
+                    <div style="text-align:center"><img src="https://images.unsplash.com/photo-1541675154750-0444c7d51e8e?q=80&w=200" style="width:100%"><br>票据.jpg</div>
+                </div>`;
+            alert("你收到了颜老师的新邮件！");
+        }, 4000);
+    }
+
+    function runSearch() {
+        const k = document.getElementById('sk').value;
+        const res = document.getElementById('search-res');
+        res.innerHTML = "搜索中...";
+        setTimeout(() => {
+            let found = false;
+            for(let key in STORY.searchDB) {
+                if(k.includes(key)) { res.innerHTML = STORY.searchDB[key]; found = true; break; }
+            }
+            if(!found) res.innerHTML = "未找到相关结果。";
+        }, 500);
+    }
+
+    /* --- 窗口交互 (Window UI) --- */
+    function openWin(id) { 
+        const w = document.getElementById(id); 
+        w.style.display='flex'; w.style.top='50px'; w.style.left='100px'; 
+    }
+    function closeWin(id) { document.getElementById(id).style.display='none'; }
+    document.addEventListener('mousedown', e => {
+        const h = e.target.closest('.win-header'); if(!h) return;
+        const w = h.parentElement; const sx = e.clientX-w.offsetLeft, sy = e.clientY-w.offsetTop;
+        const mv = ev => { w.style.left = ev.clientX-sx+'px'; w.style.top = ev.clientY-sy+'px'; };
+        document.addEventListener('mousemove', mv);
+        document.addEventListener('mouseup', () => document.removeEventListener('mousemove', mv), {once:true});
+    });
+
+    init();
+</script>
+</body>
+</html>
